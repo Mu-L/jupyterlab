@@ -1,32 +1,24 @@
 // Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
 
-import Ajv from 'ajv';
-
-import * as json5 from 'json5';
-
+import { IDataConnector } from '@jupyterlab/statedb';
 import { CommandRegistry } from '@lumino/commands';
-
 import {
   JSONExt,
   JSONObject,
   JSONValue,
-  ReadonlyJSONObject,
+  PartialJSONObject,
   PartialJSONValue,
+  ReadonlyJSONObject,
   ReadonlyPartialJSONObject,
-  ReadonlyPartialJSONValue,
-  PartialJSONObject
+  ReadonlyPartialJSONValue
 } from '@lumino/coreutils';
-
 import { DisposableDelegate, IDisposable } from '@lumino/disposable';
-
 import { ISignal, Signal } from '@lumino/signaling';
-
-import { IDataConnector } from '@jupyterlab/statedb';
-
-import { ISettingRegistry } from './tokens';
-
+import Ajv from 'ajv';
+import * as json5 from 'json5';
 import SCHEMA from './plugin-schema.json';
+import { ISettingRegistry } from './tokens';
 
 /**
  * An alias for the JSON deep copy function.
@@ -897,6 +889,158 @@ export namespace SettingRegistry {
   }
 
   /**
+   * Reconcile the menus.
+   *
+   * @param reference The reference list of menus.
+   * @param addition The list of menus to add.
+   * @param warn Warn if the command items are duplicated within the same menu.
+   * @returns The reconciled list of menus.
+   */
+  export function reconcileMenus(
+    reference: ISettingRegistry.IMenu[] | null,
+    addition: ISettingRegistry.IMenu[] | null,
+    warn: boolean = false,
+    addNewItems: boolean = true
+  ): ISettingRegistry.IMenu[] {
+    if (!reference) {
+      return addition && addNewItems ? JSONExt.deepCopy(addition) : [];
+    }
+    if (!addition) {
+      return JSONExt.deepCopy(reference);
+    }
+
+    const merged = JSONExt.deepCopy(reference);
+
+    addition.forEach(menu => {
+      const refIndex = merged.findIndex(ref => ref.id === menu.id);
+      if (refIndex >= 0) {
+        merged[refIndex] = {
+          ...merged[refIndex],
+          ...menu,
+          items: reconcileItems(
+            merged[refIndex].items,
+            menu.items,
+            warn,
+            addNewItems
+          )
+        };
+      } else {
+        if (addNewItems) {
+          merged.push(menu);
+        }
+      }
+    });
+
+    return merged;
+  }
+
+  /**
+   * Merge two set of menu items.
+   *
+   * @param reference Reference set of menu items
+   * @param addition New items to add
+   * @param warn Whether to warn if item is duplicated; default to false
+   * @returns The merged set of items
+   */
+  export function reconcileItems<T extends ISettingRegistry.IMenuItem>(
+    reference?: T[],
+    addition?: T[],
+    warn: boolean = false,
+    addNewItems: boolean = true
+  ): T[] | undefined {
+    if (!reference) {
+      return addition ? JSONExt.deepCopy(addition) : undefined;
+    }
+    if (!addition) {
+      return JSONExt.deepCopy(reference);
+    }
+
+    const items = JSONExt.deepCopy(reference);
+
+    // Merge array element depending on the type
+    addition.forEach(item => {
+      switch (item.type ?? 'command') {
+        case 'separator':
+          if (addNewItems) {
+            items.push({ ...item });
+          }
+          break;
+        case 'submenu':
+          if (item.submenu) {
+            const refIndex = items.findIndex(
+              ref =>
+                ref.type === 'submenu' && ref.submenu?.id === item.submenu?.id
+            );
+            if (refIndex < 0) {
+              if (addNewItems) {
+                items.push(JSONExt.deepCopy(item));
+              }
+            } else {
+              items[refIndex] = {
+                ...items[refIndex],
+                ...item,
+                submenu: reconcileMenus(
+                  items[refIndex].submenu
+                    ? [items[refIndex].submenu as any]
+                    : null,
+                  [item.submenu],
+                  warn,
+                  addNewItems
+                )[0]
+              };
+            }
+          }
+          break;
+        case 'command':
+          if (item.command) {
+            const refIndex = items.findIndex(
+              ref =>
+                ref.command === item.command &&
+                ref.selector === item.selector &&
+                JSONExt.deepEqual(ref.args ?? {}, item.args ?? {})
+            );
+            if (refIndex < 0) {
+              if (addNewItems) {
+                items.push({ ...item });
+              }
+            } else {
+              if (warn) {
+                console.warn(
+                  `Menu entry for command '${item.command}' is duplicated.`
+                );
+              }
+              items[refIndex] = { ...items[refIndex], ...item };
+            }
+          }
+      }
+    });
+
+    return items;
+  }
+
+  export function filterDisabledItems<T extends ISettingRegistry.IMenuItem>(
+    items: T[]
+  ): T[] {
+    return items.reduce<T[]>((final, value) => {
+      const copy = { ...value };
+      if (!copy.disabled) {
+        if (copy.type === 'submenu') {
+          const { submenu } = copy;
+          if (submenu && !submenu.disabled) {
+            copy.submenu = {
+              ...submenu,
+              items: filterDisabledItems(submenu.items ?? [])
+            };
+          }
+        }
+        final.push(copy);
+      }
+
+      return final;
+    }, []);
+  }
+
+  /**
    * Reconcile default and user shortcuts and return the composite list.
    *
    * @param defaults - The list of default shortcuts.
@@ -911,7 +1055,7 @@ export namespace SettingRegistry {
   ): ISettingRegistry.IShortcut[] {
     const memo: {
       [keys: string]: {
-        [selector: string]: boolean; // If `true`, this is a default shortcut.
+        [selector: string]: boolean; // If `true`, should warn if a default shortcut conflicts.
       };
     } = {};
 
@@ -920,8 +1064,6 @@ export namespace SettingRegistry {
       const keys = CommandRegistry.normalizeKeys(shortcut).join(
         RECORD_SEPARATOR
       );
-      const { selector } = shortcut;
-
       if (!keys) {
         console.warn(
           'Skipping this shortcut because there are no actionable keys on this platform',
@@ -932,8 +1074,10 @@ export namespace SettingRegistry {
       if (!(keys in memo)) {
         memo[keys] = {};
       }
+
+      const { selector } = shortcut;
       if (!(selector in memo[keys])) {
-        memo[keys][selector] = false; // User shortcuts are `false`.
+        memo[keys][selector] = false; // Do not warn if a default shortcut conflicts.
         return true;
       }
 
@@ -944,33 +1088,37 @@ export namespace SettingRegistry {
       return false;
     });
 
-    // If a default shortcut collides with another default, warn and filter.
-    // If a shortcut has already been added by the user preferences, filter it
-    // out too (this includes shortcuts that are disabled by user preferences).
-    defaults = defaults.filter(shortcut => {
-      const { disabled } = shortcut;
+    // If a default shortcut collides with another default, warn and filter,
+    // unless one of the shortcuts is a disabling shortcut (so look through
+    // disabled shortcuts first). If a shortcut has already been added by the
+    // user preferences, filter it out too (this includes shortcuts that are
+    // disabled by user preferences).
+    defaults = [
+      ...defaults.filter(s => !!s.disabled),
+      ...defaults.filter(s => !s.disabled)
+    ].filter(shortcut => {
       const keys = CommandRegistry.normalizeKeys(shortcut).join(
         RECORD_SEPARATOR
       );
 
-      if (disabled || !keys) {
+      if (!keys) {
         return false;
       }
       if (!(keys in memo)) {
         memo[keys] = {};
       }
 
-      const { selector } = shortcut;
-
+      const { disabled, selector } = shortcut;
       if (!(selector in memo[keys])) {
-        memo[keys][selector] = true; // Default shortcuts are `true`.
+        // Warn of future conflicts if the default shortcut is not disabled.
+        memo[keys][selector] = !disabled;
         return true;
       }
 
-      // Only warn if a default shortcut collides with another default shortcut.
+      // We have a conflict now. Warn the user if we need to do so.
       if (memo[keys][selector]) {
         console.warn(
-          'Skipping this shortcut because it collides with another shortcut.',
+          'Skipping this default shortcut because it collides with another default shortcut.',
           shortcut
         );
       }
@@ -978,8 +1126,8 @@ export namespace SettingRegistry {
       return false;
     });
 
-    // Filter out disabled user shortcuts and concat defaults before returning.
-    return user.filter(shortcut => !shortcut.disabled).concat(defaults);
+    // Return all the shortcuts that should be registered
+    return user.concat(defaults).filter(shortcut => !shortcut.disabled);
   }
 }
 

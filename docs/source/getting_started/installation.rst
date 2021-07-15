@@ -3,7 +3,7 @@
 Installation
 ============
 
-JupyterLab can be installed using ``conda``, ``pip``, ``pipenv`` or ``docker``.
+JupyterLab can be installed using ``conda``, ``mamba``, ``pip``, ``pipenv`` or ``docker``.
 
 conda
 -----
@@ -13,6 +13,15 @@ If you use ``conda``, you can install it with:
 .. code:: bash
 
     conda install -c conda-forge jupyterlab
+
+mamba
+-----
+
+If you use ``mamba``, you can install it with:
+
+.. code:: bash
+
+    mamba install -c conda-forge jupyterlab
 
 pip
 ---
@@ -27,7 +36,7 @@ If you use ``pip``, you can install it with:
 If installing using ``pip install --user``, you must add the user-level
 ``bin`` directory to your ``PATH`` environment variable in order to launch
 ``jupyter lab``. If you are using a Unix derivative (FreeBSD, GNU / Linux, 
-OS X), you can achieve this by using ``export PATH="$HOME/.local/bin:$PATH"`` command.
+macOS), you can achieve this by using ``export PATH="$HOME/.local/bin:$PATH"`` command.
 
 pipenv
 ------
@@ -118,7 +127,7 @@ you may encounter HTTP and SSL errors due to the proxy or firewall blocking conn
 
     CondaHTTPError: HTTP 000 CONNECTION FAILED for url <https://repo.anaconda.com/pkgs/main/win-64/current_repodata.json>
 
-Here are some widely-used sites that host packages in the Python and JavaScript open-source ecosystems. Your network adminstrator may be able to allow http and https connections to these domains:
+Here are some widely-used sites that host packages in the Python and JavaScript open-source ecosystems. Your network administrator may be able to allow http and https connections to these domains:
 
 - pypi.org
 - pythonhosted.org

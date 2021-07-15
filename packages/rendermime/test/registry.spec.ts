@@ -1,32 +1,23 @@
 // Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
 
-import json2html from 'json-to-html';
-
-import { UUID, JSONObject } from '@lumino/coreutils';
-
-import { Contents, Drive, ServiceManager, Session } from '@jupyterlab/services';
-
-import { toArray } from '@lumino/algorithm';
-
-import { PageConfig } from '@jupyterlab/coreutils';
-
-import { Widget } from '@lumino/widgets';
-
 import { SessionContext } from '@jupyterlab/apputils';
-
+import { PageConfig } from '@jupyterlab/coreutils';
 import { MathJaxTypesetter } from '@jupyterlab/mathjax2';
-
+import { Contents, Drive, ServiceManager, Session } from '@jupyterlab/services';
+import * as Mock from '@jupyterlab/testutils/lib/mock';
+import { toArray } from '@lumino/algorithm';
+import { JSONObject, UUID } from '@lumino/coreutils';
+import { Widget } from '@lumino/widgets';
+import json2html from 'json-to-html';
 import {
-  MimeModel,
   IRenderMime,
+  MimeModel,
+  RenderedHTML,
   RenderedText,
   RenderMimeRegistry,
-  RenderedHTML,
   standardRendererFactories
 } from '../src';
-
-import * as Mock from '@jupyterlab/testutils/lib/mock';
 
 class JSONRenderer extends RenderedHTML {
   mimeType = 'text/html';
@@ -443,11 +434,11 @@ describe('rendermime/registry', () => {
         });
 
         it('should resolve URLs with escapes', async () => {
-          expect(await resolverSession.resolveUrl('has%20space')).toContain(
-            urlParent + '/has%20space'
-          );
-          expect(await resolverPath.resolveUrl('has%20space')).toContain(
-            urlParent + '/has%20space'
+          expect(
+            await resolverSession.resolveUrl('has%20space%23hash')
+          ).toContain(urlParent + '/has%20space%23hash');
+          expect(await resolverPath.resolveUrl('has%20space%23hash')).toContain(
+            urlParent + '/has%20space%23hash'
           );
         });
       });
@@ -461,8 +452,10 @@ describe('rendermime/registry', () => {
         });
 
         it('should resolve escapes correctly', async () => {
-          const contextPromise = resolverPath.getDownloadUrl('foo%2520test');
-          const contentsPromise = contents.getDownloadUrl('foo%20test');
+          const contextPromise = resolverPath.getDownloadUrl(
+            'foo%20%23%2520test'
+          );
+          const contentsPromise = contents.getDownloadUrl('foo #%20test');
           const values = await Promise.all([contextPromise, contentsPromise]);
           expect(values[0]).toBe(values[1]);
         });

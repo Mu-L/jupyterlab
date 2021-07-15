@@ -33,7 +33,7 @@ const MISSING: Dict<string[]> = {
 
 const UNUSED: Dict<string[]> = {
   // url is a polyfill for sanitize-html
-  '@jupyterlab/apputils': ['@types/react', 'buffer', 'url'],
+  '@jupyterlab/apputils': ['@types/react', 'url'],
   '@jupyterlab/application': ['@fortawesome/fontawesome-free'],
   '@jupyterlab/apputils-extension': ['es6-promise'],
   '@jupyterlab/builder': [
@@ -57,6 +57,7 @@ const UNUSED: Dict<string[]> = {
     'css-loader',
     'file-loader',
     'path-browserify',
+    'process',
     'raw-loader',
     'style-loader',
     'svg-url-loader',
@@ -66,6 +67,7 @@ const UNUSED: Dict<string[]> = {
     'webpack-cli',
     'worker-loader'
   ],
+  '@jupyterlab/buildutils': ['npm-cli-login', 'verdaccio'],
   '@jupyterlab/coreutils': ['path-browserify'],
   '@jupyterlab/services': ['node-fetch', 'ws'],
   '@jupyterlab/rendermime': ['@jupyterlab/mathjax2'],
@@ -157,6 +159,7 @@ const SKIP_CSS: Dict<string[]> = {
     '@jupyterlab/debugger',
     '@jupyterlab/debugger-extension',
     '@jupyterlab/docmanager-extension',
+    '@jupyterlab/docprovider-extension',
     '@jupyterlab/documentsearch-extension',
     '@jupyterlab/extensionmanager',
     '@jupyterlab/extensionmanager-extension',
@@ -213,6 +216,14 @@ const SKIP_CSS: Dict<string[]> = {
     '@jupyterlab/docregistry',
     '@jupyterlab/cells',
     '@jupyterlab/notebook'
+  ],
+  '@jupyterlab/theme-light-extension': [
+    '@jupyterlab/application',
+    '@jupyterlab/apputils'
+  ],
+  '@jupyterlab/theme-dark-extension': [
+    '@jupyterlab/application',
+    '@jupyterlab/apputils'
   ],
   '@jupyterlab/ui-extension': ['@blueprintjs/icons']
 };
@@ -443,9 +454,7 @@ export async function ensureIntegrity(): Promise<boolean> {
   // Pick up all the package versions.
   const paths = utils.getLernaPaths();
 
-  // These two are not part of the workspaces but should be kept
-  // in sync.
-  paths.push('./jupyterlab/tests/mock_packages/extension');
+  // This package is not part of the workspaces but should be kept in sync.
   paths.push('./jupyterlab/tests/mock_packages/mimeextension');
 
   const cssImports: Dict<string[]> = {};
@@ -484,25 +493,23 @@ export async function ensureIntegrity(): Promise<boolean> {
       ...(data.jupyterlab && data.jupyterlab.extraStyles)
     };
 
-    // Add automatic dependency css if package is not a theme package
-    if (!(data.jupyterlab && data.jupyterlab.themePath)) {
-      Object.keys(deps).forEach(depName => {
-        // Bail for skipped imports and known extra styles.
-        if (skip.includes(depName) || depName in cssData) {
-          return;
-        }
+    // Add automatic dependency css
+    Object.keys(deps).forEach(depName => {
+      // Bail for skipped imports and known extra styles.
+      if (skip.includes(depName) || depName in cssData) {
+        return;
+      }
 
-        const depData = graph.getNodeData(depName) as any;
-        if (typeof depData.style === 'string') {
-          cssData[depName] = [depData.style];
-        }
-        if (typeof depData.styleModule === 'string') {
-          cssModuleData[depName] = [depData.styleModule];
-        } else if (typeof depData.style === 'string') {
-          cssModuleData[depName] = [depData.style];
-        }
-      });
-    }
+      const depData = graph.getNodeData(depName) as any;
+      if (typeof depData.style === 'string') {
+        cssData[depName] = [depData.style];
+      }
+      if (typeof depData.styleModule === 'string') {
+        cssModuleData[depName] = [depData.styleModule];
+      } else if (typeof depData.style === 'string') {
+        cssModuleData[depName] = [depData.style];
+      }
+    });
 
     // Get our CSS imports in dependency order.
     cssImports[name] = [];

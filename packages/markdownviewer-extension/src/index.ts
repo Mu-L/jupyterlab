@@ -10,24 +10,19 @@ import {
   JupyterFrontEnd,
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
-
 import { WidgetTracker } from '@jupyterlab/apputils';
-
+import { PathExt } from '@jupyterlab/coreutils';
 import {
-  MarkdownViewer,
-  MarkdownViewerFactory,
+  IMarkdownViewerTracker,
   MarkdownDocument,
-  IMarkdownViewerTracker
+  MarkdownViewer,
+  MarkdownViewerFactory
 } from '@jupyterlab/markdownviewer';
-
 import {
   IRenderMimeRegistry,
   markdownRendererFactory
 } from '@jupyterlab/rendermime';
-
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
-
-import { PathExt } from '@jupyterlab/coreutils';
 import { ITranslator } from '@jupyterlab/translation';
 
 /**
@@ -50,12 +45,8 @@ const plugin: JupyterFrontEndPlugin<IMarkdownViewerTracker> = {
   activate,
   id: '@jupyterlab/markdownviewer-extension:plugin',
   provides: IMarkdownViewerTracker,
-  requires: [
-    ILayoutRestorer,
-    IRenderMimeRegistry,
-    ISettingRegistry,
-    ITranslator
-  ],
+  requires: [IRenderMimeRegistry, ITranslator],
+  optional: [ILayoutRestorer, ISettingRegistry],
   autoStart: true
 };
 
@@ -64,10 +55,10 @@ const plugin: JupyterFrontEndPlugin<IMarkdownViewerTracker> = {
  */
 function activate(
   app: JupyterFrontEnd,
-  restorer: ILayoutRestorer,
   rendermime: IRenderMimeRegistry,
-  settingRegistry: ISettingRegistry,
-  translator: ITranslator
+  translator: ITranslator,
+  restorer: ILayoutRestorer | null,
+  settingRegistry: ISettingRegistry | null
 ): IMarkdownViewerTracker {
   const trans = translator.load('jupyterlab');
   const { commands, docRegistry } = app;
@@ -93,28 +84,27 @@ function activate(
     });
   }
 
-  /**
-   * Update the setting values.
-   */
-  function updateSettings(settings: ISettingRegistry.ISettings) {
-    config = settings.composite as Partial<MarkdownViewer.IConfig>;
-    tracker.forEach(widget => {
-      updateWidget(widget.content);
-    });
-  }
-
-  // Fetch the initial state of the settings.
-  settingRegistry
-    .load(plugin.id)
-    .then((settings: ISettingRegistry.ISettings) => {
-      settings.changed.connect(() => {
-        updateSettings(settings);
+  if (settingRegistry) {
+    const updateSettings = (settings: ISettingRegistry.ISettings) => {
+      config = settings.composite as Partial<MarkdownViewer.IConfig>;
+      tracker.forEach(widget => {
+        updateWidget(widget.content);
       });
-      updateSettings(settings);
-    })
-    .catch((reason: Error) => {
-      console.error(reason.message);
-    });
+    };
+
+    // Fetch the initial state of the settings.
+    settingRegistry
+      .load(plugin.id)
+      .then((settings: ISettingRegistry.ISettings) => {
+        settings.changed.connect(() => {
+          updateSettings(settings);
+        });
+        updateSettings(settings);
+      })
+      .catch((reason: Error) => {
+        console.error(reason.message);
+      });
+  }
 
   // Register the MarkdownViewer factory.
   const factory = new MarkdownViewerFactory({
@@ -136,11 +126,13 @@ function activate(
   docRegistry.addWidgetFactory(factory);
 
   // Handle state restoration.
-  void restorer.restore(tracker, {
-    command: 'docmanager:open',
-    args: widget => ({ path: widget.context.path, factory: FACTORY }),
-    name: widget => widget.context.path
-  });
+  if (restorer) {
+    void restorer.restore(tracker, {
+      command: 'docmanager:open',
+      args: widget => ({ path: widget.context.path, factory: FACTORY }),
+      name: widget => widget.context.path
+    });
+  }
 
   commands.addCommand(CommandIDs.markdownPreview, {
     label: trans.__('Markdown Preview'),
@@ -179,11 +171,6 @@ function activate(
       );
     },
     label: trans.__('Show Markdown Editor')
-  });
-
-  app.contextMenu.addItem({
-    command: CommandIDs.markdownEditor,
-    selector: '.jp-RenderedMarkdown'
   });
 
   return tracker;

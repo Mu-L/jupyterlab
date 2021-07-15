@@ -1,7 +1,7 @@
 // Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
 
-import { URLExt, PathExt } from '@jupyterlab/coreutils';
+import { PathExt, URLExt } from '@jupyterlab/coreutils';
 
 import { ModelDB } from '@jupyterlab/observables';
 
@@ -109,7 +109,7 @@ export namespace Contents {
   }
 
   /**
-   * Validates an IModel, thowing an error if it does not pass.
+   * Validates an IModel, throwing an error if it does not pass.
    */
   export function validateContentsModel(contents: IModel): void {
     validate.validateContentsModel(contents);
@@ -123,7 +123,7 @@ export namespace Contents {
   /**
    * A contents file format.
    */
-  export type FileFormat = 'json' | 'text' | 'base64';
+  export type FileFormat = 'json' | 'text' | 'base64' | null;
 
   /**
    * The options used to fetch a file.
@@ -186,7 +186,7 @@ export namespace Contents {
   }
 
   /**
-   * Validates an ICheckpointModel, thowing an error if it does not pass.
+   * Validates an ICheckpointModel, throwing an error if it does not pass.
    */
   export function validateCheckpointModel(checkpoint: ICheckpointModel): void {
     validate.validateCheckpointModel(checkpoint);
@@ -1095,9 +1095,9 @@ export class Drive implements Contents.IDrive {
     let url = URLExt.join(baseUrl, FILES_URL, URLExt.encodeParts(localPath));
     const xsrfTokenMatch = document.cookie.match('\\b_xsrf=([^;]*)\\b');
     if (xsrfTokenMatch) {
-      const fullurl = new URL(url);
-      fullurl.searchParams.append('_xsrf', xsrfTokenMatch[1]);
-      url = fullurl.toString();
+      const fullUrl = new URL(url);
+      fullUrl.searchParams.append('_xsrf', xsrfTokenMatch[1]);
+      url = fullUrl.toString();
     }
     return Promise.resolve(url);
   }

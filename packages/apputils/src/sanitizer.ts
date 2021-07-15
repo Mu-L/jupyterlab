@@ -4,49 +4,12 @@
 // sanitize-html uses the url package, so we depend on a standalone version of
 // it which acts as a polyfill for browsers.
 import sanitize from 'sanitize-html';
-
-export interface ISanitizer {
-  /**
-   * Sanitize an HTML string.
-   *
-   * @param dirty - The dirty text.
-   *
-   * @param options - The optional sanitization options.
-   *
-   * @returns The sanitized string.
-   */
-  sanitize(dirty: string, options?: ISanitizer.IOptions): string;
-}
-
-/**
- * The namespace for `ISanitizer` related interfaces.
- */
-export namespace ISanitizer {
-  /**
-   * The options used to sanitize.
-   */
-  export interface IOptions {
-    /**
-     * The allowed tags.
-     */
-    allowedTags?: string[];
-
-    /**
-     * The allowed attributes for a given tag.
-     */
-    allowedAttributes?: { [key: string]: string[] };
-
-    /**
-     * The allowed style values for a given tag.
-     */
-    allowedStyles?: { [key: string]: { [key: string]: RegExp[] } };
-  }
-}
+import { ISanitizer } from './tokens';
 
 /**
  * Helper class that contains regular expressions for inline CSS style validation.
  *
- * Which properties (and values) to allow is largly based on the Google Caja project:
+ * Which properties (and values) to allow is largely based on the Google Caja project:
  *   https://github.com/google/caja
  *
  * The regular expressions are largly based on the syntax definition found at
@@ -90,7 +53,7 @@ class CssProp {
   };
 
   /*
-   * Atomic (i.e. not dependant on other regular expresions) sub RegEx segments
+   * Atomic (i.e. not dependant on other regular expressions) sub RegEx segments
    */
   private static readonly A = {
     absolute_size: `xx-small|x-small|small|medium|large|x-large|xx-large`,
@@ -122,7 +85,7 @@ class CssProp {
   };
 
   /*
-   * Compound (i.e. dependant on other (sub) regular expresions) sub RegEx segments
+   * Compound (i.e. dependant on other (sub) regular expressions) sub RegEx segments
    */
   private static readonly _C = {
     alpha: `${CssProp.N.integer_zero_ff}|${CssProp.N.number_zero_one}|${CssProp.B.percentage_zero_hundred}`,
@@ -453,7 +416,7 @@ class CssProp {
 /**
  * A class to sanitize HTML strings.
  */
-class Sanitizer implements ISanitizer {
+export class Sanitizer implements ISanitizer {
   /**
    * Sanitize an HTML string.
    *
@@ -628,7 +591,16 @@ class Sanitizer implements ISanitizer {
       bdo: ['dir'],
       blockquote: ['cite'],
       br: ['clear'],
-      button: ['accesskey', 'disabled', 'name', 'tabindex', 'type', 'value'],
+      button: [
+        'accesskey',
+        'data-commandlinker-args',
+        'data-commandlinker-command',
+        'disabled',
+        'name',
+        'tabindex',
+        'type',
+        'value'
+      ],
       canvas: ['height', 'width'],
       caption: ['align'],
       col: ['align', 'char', 'charoff', 'span', 'valign', 'width'],

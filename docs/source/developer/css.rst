@@ -69,9 +69,8 @@ is simple:
 CSS variable usage
 ^^^^^^^^^^^^^^^^^^
 
-JupyterLab includes a default set of CSS variables in the file:
-
-``packages/theme-light-extension/style/variables.css``
+JupyterLab includes a default set of CSS variables in the file
+`packages/theme-light-extension/style/variables.css <https://github.com/jupyterlab/jupyterlab/blob/master/packages/theme-light-extension/style/variables.css>`_.
 
 To ensure consistent design in JupyterLab, all built-in and third party
 extensions should use these variables in their styles if at all
@@ -234,7 +233,7 @@ intended to be used for adding context menu items and keyboard shortcuts.
 **CSS classes that describe the state of a widget**
 
 -  ``jp-mod-current``: applied to elements on the current document only
--  ``jp-mod-completer-enabled``: applied to ediors that can host a completer
+-  ``jp-mod-completer-enabled``: applied to editors that can host a completer
 -  ``jp-mod-commandMode``: applied to a notebook in command mode
 -  ``jp-mod-editMode``: applied to a notebook in edit mode
 -  ``jp-mod-has-primary-selection``: applied to editors that have a primary selection

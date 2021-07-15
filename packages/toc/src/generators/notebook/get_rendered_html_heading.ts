@@ -1,11 +1,11 @@
 // Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
 
-import { Cell } from '@jupyterlab/cells';
 import { ISanitizer } from '@jupyterlab/apputils';
-import { INumberingDictionary } from '../../utils/numbering_dictionary';
-import { INotebookHeading } from '../../utils/headings';
+import { Cell } from '@jupyterlab/cells';
 import { generateNumbering } from '../../utils/generate_numbering';
+import { INotebookHeading } from '../../utils/headings';
+import { INumberingDictionary } from '../../utils/numbering_dictionary';
 import { sanitizerOptions } from '../../utils/sanitizer_options';
 
 /**
@@ -26,7 +26,9 @@ type onClickFactory = (el: Element) => () => void;
  * @param dict - numbering dictionary
  * @param lastLevel - last level
  * @param numbering - boolean indicating whether to enable numbering
+ * @param numberingH1 - boolean indicating whether to enable first level headers numbering
  * @param cellRef - cell reference
+ * @param index - index of referenced cell relative to other cells in the notebook
  * @returns notebook heading
  */
 function getRenderedHTMLHeadings(
@@ -36,12 +38,23 @@ function getRenderedHTMLHeadings(
   dict: INumberingDictionary,
   lastLevel: number,
   numbering = false,
-  cellRef: Cell
+  numberingH1 = true,
+  cellRef: Cell,
+  index: number = -1
 ): INotebookHeading[] {
   let nodes = node.querySelectorAll('h1, h2, h3, h4, h5, h6, p');
 
+  if (index === -1) {
+    console.warn(
+      'Deprecation warning! index argument will become mandatory in the next version'
+    );
+  }
   let headings: INotebookHeading[] = [];
   for (const el of nodes) {
+    if (el.classList.contains('jp-toc-ignore')) {
+      // skip this element if a special class name is included
+      continue;
+    }
     if (el.nodeName.toLowerCase() === 'p') {
       if (el.innerHTML) {
         let html = sanitizer.sanitize(el.innerHTML, sanitizerOptions);
@@ -52,7 +65,8 @@ function getRenderedHTMLHeadings(
           onClick: onClick(el),
           type: 'markdown',
           cellRef: cellRef,
-          hasChild: false
+          hasChild: false,
+          index: index
         });
       }
       continue;
@@ -63,13 +77,17 @@ function getRenderedHTMLHeadings(
     let html = sanitizer.sanitize(el.innerHTML, sanitizerOptions);
     html = html.replace('¶', '');
 
-    const level = parseInt(el.tagName[1], 10);
-    let nstr = generateNumbering(dict, level);
-    let nhtml = '';
-    if (numbering) {
-      nhtml = '<span class="numbering-entry">' + nstr + '</span>';
+    let level = parseInt(el.tagName[1], 10);
+    if (!numberingH1) {
+      level -= 1;
     }
-    el.innerHTML = nhtml + html;
+    let nstr = generateNumbering(dict, level);
+    if (numbering) {
+      const nhtml = document.createElement('span');
+      nhtml.classList.add('numbering-entry');
+      nhtml.textContent = nstr ?? '';
+      el.insertBefore(nhtml, el.firstChild);
+    }
     headings.push({
       level: level,
       text: el.textContent ? el.textContent : '',
@@ -78,7 +96,8 @@ function getRenderedHTMLHeadings(
       onClick: onClick(el),
       type: 'header',
       cellRef: cellRef,
-      hasChild: false
+      hasChild: false,
+      index: index
     });
   }
   return headings;

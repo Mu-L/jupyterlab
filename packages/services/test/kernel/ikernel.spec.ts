@@ -2,28 +2,21 @@
 // Distributed under the terms of the Modified BSD License.
 
 import { PageConfig } from '@jupyterlab/coreutils';
-
-import { UUID } from '@lumino/coreutils';
-
-import { PromiseDelegate } from '@lumino/coreutils';
-
-import {
-  Kernel,
-  KernelMessage,
-  KernelSpec,
-  KernelSpecAPI,
-  KernelManager,
-  KernelAPI
-} from '../../src';
-
 import {
   expectFailure,
-  testEmission,
+  flakyIt as it,
   JupyterServer,
-  flakyIt as it
+  testEmission
 } from '@jupyterlab/testutils';
-
-import { KernelTester, handleRequest } from '../utils';
+import { PromiseDelegate, UUID } from '@lumino/coreutils';
+import {
+  Kernel,
+  KernelManager,
+  KernelMessage,
+  KernelSpec,
+  KernelSpecAPI
+} from '../../src';
+import { FakeKernelManager, handleRequest, KernelTester } from '../utils';
 
 const server = new JupyterServer();
 
@@ -42,7 +35,7 @@ describe('Kernel.IKernel', () => {
 
   beforeAll(async () => {
     jest.setTimeout(20000);
-    kernelManager = new KernelManager();
+    kernelManager = new FakeKernelManager();
     specs = await KernelSpecAPI.getSpecs();
   });
 
@@ -57,8 +50,7 @@ describe('Kernel.IKernel', () => {
   });
 
   afterAll(async () => {
-    const models = await KernelAPI.listRunning();
-    await Promise.all(models.map(m => KernelAPI.shutdownKernel(m.id)));
+    await kernelManager.shutdownAll();
   });
 
   describe('#disposed', () => {
@@ -96,6 +88,27 @@ describe('Kernel.IKernel', () => {
         }
       });
       await defaultKernel.requestExecute({ code: 'a=1' }, true).done;
+      expect(called).toBe(true);
+    });
+  });
+
+  describe('#pendingInput', () => {
+    it('should be a signal following input request', async () => {
+      let called = false;
+      defaultKernel.pendingInput.connect((sender, args) => {
+        if (!called) {
+          called = true;
+          defaultKernel.sendInputReply({ status: 'ok', value: 'foo' });
+        }
+      });
+      const code = `input("Input something")`;
+      await defaultKernel.requestExecute(
+        {
+          code: code,
+          allow_stdin: true
+        },
+        true
+      ).done;
       expect(called).toBe(true);
     });
   });
@@ -345,11 +358,16 @@ describe('Kernel.IKernel', () => {
     });
 
     it('should get a restarting status', async () => {
-      const emission = testEmission(defaultKernel.statusChanged, {
-        find: () => defaultKernel.status === 'restarting'
+      const kernel = await kernelManager.startNew();
+      await kernel.info;
+      const emission = testEmission(kernel.statusChanged, {
+        find: () => kernel.status === 'restarting'
       });
-      await defaultKernel.restart();
+      await kernel.requestKernelInfo();
+      await kernel.restart();
       await emission;
+      await kernel.requestKernelInfo();
+      await kernel.shutdown();
     });
 
     it('should get a busy status', async () => {
@@ -618,11 +636,16 @@ describe('Kernel.IKernel', () => {
 
   describe('#restart()', () => {
     beforeEach(async () => {
-      await defaultKernel.info;
+      await defaultKernel.requestKernelInfo();
     });
 
     it('should restart and resolve with a valid server response', async () => {
-      await defaultKernel.restart();
+      const kernel = await kernelManager.startNew();
+      await kernel.info;
+      await kernel.requestKernelInfo();
+      await kernel.restart();
+      await kernel.requestKernelInfo();
+      await kernel.shutdown();
     });
 
     it('should fail if the kernel does not restart', async () => {
@@ -653,12 +676,16 @@ describe('Kernel.IKernel', () => {
     });
 
     it('should dispose of existing comm and future objects', async () => {
-      const comm = defaultKernel.createComm('test');
-      const future = defaultKernel.requestExecute({ code: 'foo' });
-      await defaultKernel.restart();
-      await defaultKernel.info;
+      const kernel = await kernelManager.startNew();
+      await kernel.info;
+      await kernel.requestKernelInfo();
+      const comm = kernel.createComm('test');
+      const future = kernel.requestExecute({ code: 'foo' });
+      await kernel.restart();
+      await kernel.requestKernelInfo();
       expect(future.isDisposed).toBe(true);
       expect(comm.isDisposed).toBe(true);
+      await kernel.shutdown();
     });
   });
 

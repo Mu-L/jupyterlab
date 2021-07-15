@@ -9,19 +9,14 @@ import {
   JupyterFrontEnd,
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
-
 import { ISettingRegistry, SettingRegistry } from '@jupyterlab/settingregistry';
-
 import { ITranslator } from '@jupyterlab/translation';
-
 import { CommandRegistry } from '@lumino/commands';
-
 import {
   JSONExt,
   ReadonlyPartialJSONObject,
   ReadonlyPartialJSONValue
 } from '@lumino/coreutils';
-
 import { DisposableSet, IDisposable } from '@lumino/disposable';
 
 /**
@@ -80,7 +75,8 @@ const shortcuts: JupyterFrontEndPlugin<void> = {
           loaded[plugin] = shortcuts;
           return shortcuts;
         })
-        .reduce((acc, val) => acc.concat(val), [])
+        .concat([schema.properties!.shortcuts.default as any[]])
+        .reduce((acc, val) => acc.concat(val), []) // flatten one level
         .sort((a, b) => a.command.localeCompare(b.command));
 
       schema.properties!.shortcuts.description = trans.__(

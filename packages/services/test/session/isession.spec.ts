@@ -2,27 +2,22 @@
 // Distributed under the terms of the Modified BSD License.
 
 import { PageConfig } from '@jupyterlab/coreutils';
-
-import { UUID } from '@lumino/coreutils';
-
-import { Signal } from '@lumino/signaling';
-
-import {
-  KernelMessage,
-  Session,
-  SessionManager,
-  KernelManager,
-  KernelAPI
-} from '../../src';
-
 import {
   expectFailure,
-  testEmission,
+  flakyIt as it,
   JupyterServer,
-  flakyIt as it
+  testEmission
 } from '@jupyterlab/testutils';
-
-import { handleRequest, SessionTester, init } from '../utils';
+import { UUID } from '@lumino/coreutils';
+import { Signal } from '@lumino/signaling';
+import {
+  KernelAPI,
+  KernelManager,
+  KernelMessage,
+  Session,
+  SessionManager
+} from '../../src';
+import { handleRequest, init, SessionTester } from '../utils';
 
 init();
 
@@ -382,7 +377,6 @@ describe('session', () => {
         expect(session.kernel).not.toBe(previous);
         expect(session.kernel).not.toBe(kernel);
         previous.dispose();
-        await KernelAPI.shutdownKernel(kernel.id);
       });
 
       it('should update the session path if it has changed', async () => {

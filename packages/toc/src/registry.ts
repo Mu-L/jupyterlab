@@ -3,9 +3,9 @@
 
 import { IWidgetTracker } from '@jupyterlab/apputils';
 import { Token } from '@lumino/coreutils';
-import { Signal, ISignal } from '@lumino/signaling';
+import { ISignal, Signal } from '@lumino/signaling';
 import { Widget } from '@lumino/widgets';
-import { IHeading } from './utils/headings';
+import { IHeading, INotebookHeading } from './utils/headings';
 
 /**
  * Interface describing the table of contents registry.
@@ -56,7 +56,7 @@ export class TableOfContentsRegistry {
    */
   add(generator: TableOfContentsRegistry.IGenerator): void {
     if (generator.collapseChanged) {
-      // If there is a collapseChanged for a given generator, propogate the arguments through the registry's signal
+      // If there is a collapseChanged for a given generator, propagate the arguments through the registry's signal
       generator.collapseChanged.connect(
         (
           sender: TableOfContentsRegistry.IGenerator<Widget>,
@@ -162,9 +162,13 @@ export namespace TableOfContentsRegistry {
      * -   If not present, a default renderer will be used.
      *
      * @param item - heading
+     * @param toc - list of headings
      * @returns JSX element
      */
-    itemRenderer?: (item: IHeading) => JSX.Element | null;
+    itemRenderer?: (
+      item: IHeading,
+      toc: INotebookHeading[]
+    ) => JSX.Element | null;
 
     /**
      * Returns a toolbar component.
@@ -183,6 +187,6 @@ export namespace TableOfContentsRegistry {
      * @param widget - widget
      * @returns list of headings
      */
-    generate(widget: W): IHeading[];
+    generate(widget: W, options?: IOptionsManager): IHeading[];
   }
 }

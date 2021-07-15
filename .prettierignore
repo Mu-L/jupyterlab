@@ -3,6 +3,7 @@
 **/lib
 **/package.json
 **/static
+**/.ipynb_checkpoints
 tests/**/coverage
 
 .eggs
@@ -27,6 +28,7 @@ packages/extensionmanager/examples/listings
 tsconfigdoc.json
 examples/federated/core_package/index.js
 examples/federated/labextensions
+ui-tests/test-output
 
 # jetbrains IDE stuff
 .idea/

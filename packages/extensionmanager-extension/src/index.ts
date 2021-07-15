@@ -11,9 +11,8 @@ import {
   JupyterFrontEnd,
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
-import { Dialog, showDialog, ICommandPalette } from '@jupyterlab/apputils';
+import { Dialog, ICommandPalette, showDialog } from '@jupyterlab/apputils';
 import { ExtensionView } from '@jupyterlab/extensionmanager';
-import { IMainMenu } from '@jupyterlab/mainmenu';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 import { ITranslator, TranslationBundle } from '@jupyterlab/translation';
 import { extensionIcon } from '@jupyterlab/ui-components';
@@ -34,14 +33,13 @@ const plugin: JupyterFrontEndPlugin<void> = {
   id: PLUGIN_ID,
   autoStart: true,
   requires: [ISettingRegistry, ITranslator],
-  optional: [ILabShell, ILayoutRestorer, IMainMenu, ICommandPalette],
+  optional: [ILabShell, ILayoutRestorer, ICommandPalette],
   activate: async (
     app: JupyterFrontEnd,
     registry: ISettingRegistry,
     translator: ITranslator,
     labShell: ILabShell | null,
     restorer: ILayoutRestorer | null,
-    mainMenu: IMainMenu | null,
     palette: ICommandPalette | null
   ) => {
     const trans = translator.load('jupyterlab');
@@ -64,6 +62,11 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
     if (enabled && labShell) {
       view = createView();
+      view.node.setAttribute('role', 'region');
+      view.node.setAttribute(
+        'aria-label',
+        trans.__('Extension Manager section')
+      );
       labShell.add(view, 'left', { rank: 1000 });
     }
 
@@ -80,6 +83,11 @@ const plugin: JupyterFrontEndPlugin<void> = {
               return;
             }
             view = view || createView();
+            view.node.setAttribute('role', 'region');
+            view.node.setAttribute(
+              'aria-label',
+              trans.__('Extension Manager section')
+            );
             if (labShell) {
               labShell.add(view, 'left', { rank: 1000 });
             }
@@ -110,10 +118,6 @@ const plugin: JupyterFrontEndPlugin<void> = {
     const command = CommandIDs.toggle;
     if (palette) {
       palette.addItem({ command, category });
-    }
-
-    if (mainMenu) {
-      mainMenu.settingsMenu.addGroup([{ command }], 100);
     }
   }
 };

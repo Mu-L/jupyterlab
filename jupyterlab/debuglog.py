@@ -13,8 +13,9 @@ import sys
 import tempfile
 import traceback
 
-from traitlets import Unicode, default
+from traitlets import Unicode
 from traitlets.config import Configurable
+
 
 class DebugLogFileMixin(Configurable):
     debug_log_path = Unicode('', config=True, help='Path to use for the debug log file')
@@ -51,9 +52,9 @@ class DebugLogFileMixin(Configurable):
             for line in msg:
                 self.log.debug(line)
             if isinstance(ex, SystemExit):
-                print('An error occured. See the log file for details: ', log_path)
+                print('An error occurred. See the log file for details: ', log_path)
                 raise
-            print('An error occured.')
+            print('An error occurred.')
             print(msg[-1].strip())
             print('See the log file for details: ', log_path)
             self.exit(1)

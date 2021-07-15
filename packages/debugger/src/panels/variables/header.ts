@@ -3,7 +3,7 @@
 
 import { Toolbar } from '@jupyterlab/apputils';
 
-import { nullTranslator, ITranslator } from '@jupyterlab/translation';
+import { ITranslator, nullTranslator } from '@jupyterlab/translation';
 
 import { PanelLayout, Widget } from '@lumino/widgets';
 
@@ -15,7 +15,9 @@ export class VariablesHeader extends Widget {
    * Instantiate a new VariablesHeader.
    */
   constructor(translator?: ITranslator) {
-    super({ node: document.createElement('header') });
+    super({ node: document.createElement('div') });
+    this.node.classList.add('jp-stack-panel-header');
+
     translator = translator || nullTranslator;
     const trans = translator.load('jupyterlab');
 

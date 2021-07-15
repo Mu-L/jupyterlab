@@ -6,6 +6,8 @@ import { Widget } from '@lumino/widgets';
 import { IHeading } from './utils/headings';
 import { TableOfContentsRegistry as Registry } from './registry';
 import { TOCItem } from './toc_item';
+import { Signal } from '@lumino/signaling';
+import { TableOfContents } from './toc';
 
 /**
  * Interface describing component properties.
@@ -28,6 +30,8 @@ interface IProperties extends React.Props<TOCTree> {
    */
   toolbar: any;
 
+  entryClicked?: Signal<TableOfContents, TOCItem>;
+
   /**
    * Table of contents generator.
    */
@@ -37,9 +41,10 @@ interface IProperties extends React.Props<TOCTree> {
    * Renders a heading item.
    *
    * @param item - heading
+   * @param toc - list of headings in toc to use for rendering current position
    * @returns rendered heading
    */
-  itemRenderer: (item: IHeading) => JSX.Element | null;
+  itemRenderer: (item: IHeading, toc: IHeading[]) => JSX.Element | null;
 }
 
 /**
@@ -67,6 +72,8 @@ class TOCTree extends React.Component<IProperties, IState> {
       return (
         <TOCItem
           heading={el}
+          toc={this.props.toc}
+          entryClicked={this.props.entryClicked}
           itemRenderer={this.props.itemRenderer}
           key={`${el.text}-${el.level}-${i++}`}
         />
@@ -74,7 +81,7 @@ class TOCTree extends React.Component<IProperties, IState> {
     });
     return (
       <div className="jp-TableOfContents">
-        <header>{this.props.title}</header>
+        <div className="jp-stack-panel-header">{this.props.title}</div>
         {Toolbar && <Toolbar />}
         <ul className="jp-TableOfContents-content">{list}</ul>
       </div>

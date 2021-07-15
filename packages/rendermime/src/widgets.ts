@@ -3,18 +3,13 @@
 | Distributed under the terms of the Modified BSD License.
 |----------------------------------------------------------------------------*/
 import { IRenderMime } from '@jupyterlab/rendermime-interfaces';
-
-import { nullTranslator, ITranslator } from '@jupyterlab/translation';
-
+import { ITranslator, nullTranslator } from '@jupyterlab/translation';
 import {
   ReadonlyJSONObject,
   ReadonlyPartialJSONObject
 } from '@lumino/coreutils';
-
 import { Message } from '@lumino/messaging';
-
 import { Widget } from '@lumino/widgets';
-
 import * as renderers from './renderers';
 
 /**
@@ -65,7 +60,7 @@ export abstract class RenderedCommon
   readonly latexTypesetter: IRenderMime.ILatexTypesetter | null;
 
   /**
-   * The latexTypesetter.
+   * The translator.
    */
   readonly translator: ITranslator;
 

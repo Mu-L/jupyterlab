@@ -9,15 +9,17 @@
 
 [![PyPI version](https://badge.fury.io/py/jupyterlab.svg)](https://badge.fury.io/py/jupyterlab)
 [![Downloads](https://pepy.tech/badge/jupyterlab/month)](https://pepy.tech/project/jupyterlab/month)
-[![Build Status](https://github.com/jupyterlab/jupyterlab/workflows/Linux%20Tests/badge.svg)](https://github.com/jupyterlab/jupyterlab/actions?query=workflow%3A%22Linux+Tests%22)
-[![Build Status](https://github.com/jupyterlab/jupyterlab/workflows/Windows%20Tests/badge.svg)](https://github.com/jupyterlab/jupyterlab/actions?query=workflow%3A%22Windows+Tests%22)
+[![Build Status](https://github.com/jupyterlab/jupyterlab/workflows/Linux%20Tests/badge.svg)](https://github.com/jupyterlab/jupyterlab/actions?query=branch%3Amaster+workflow%3A%22Linux+Tests%22)
+[![Build Status](https://github.com/jupyterlab/jupyterlab/workflows/Windows%20Tests/badge.svg)](https://github.com/jupyterlab/jupyterlab/actions?query=branch%3Amaster+workflow%3A%22Windows+Tests%22)
 [![Documentation Status](https://readthedocs.org/projects/jupyterlab/badge/?version=stable)](http://jupyterlab.readthedocs.io/en/stable/)
 [![Crowdin](https://badges.crowdin.net/jupyterlab/localized.svg)](https://crowdin.com/project/jupyterlab)
 [![GitHub](https://img.shields.io/badge/issue_tracking-github-blue.svg)](https://github.com/jupyterlab/jupyterlab/issues)
 [![Discourse](https://img.shields.io/badge/help_forum-discourse-blue.svg)](https://discourse.jupyter.org/c/jupyterlab)
 [![Gitter](https://img.shields.io/badge/social_chat-gitter-blue.svg)](https://gitter.im/jupyterlab/jupyterlab)
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jupyterlab/jupyterlab-demo/3818244?urlpath=lab/tree/demo)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jupyterlab/jupyterlab-demo/5a5eb6b?urlpath=lab/tree/demo)
+
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/jupyterlab/jupyterlab)
 
 An extensible environment for interactive and reproducible computing, based on the
 Jupyter Notebook and Architecture. [Currently ready for users.](https://blog.jupyter.org/jupyterlab-is-ready-for-users-5a6f039b8906)
@@ -29,7 +31,12 @@ powerful user interface.
 JupyterLab will eventually replace the classic Jupyter Notebook.
 
 JupyterLab can be extended using [npm](https://www.npmjs.com/) packages
-that use our public APIs. To find JupyterLab extensions, search for the npm keyword [jupyterlab-extension](https://www.npmjs.com/search?q=keywords:jupyterlab-extension) or the GitHub topic [jupyterlab-extension](https://github.com/topics/jupyterlab-extension). To learn more about extensions, see the [user documentation](https://jupyterlab.readthedocs.io/en/stable/user/extensions.html).
+that use our public APIs. The _prebuilt_ extensions can be distributed
+via [PyPI](https://pypi.org/search/?q=jupyterlab&o=-created&c=Framework+%3A%3A+Jupyter),
+conda, and other package managers. The _source_ extensions can be installed
+directly from npm (search for [jupyterlab-extension](https://www.npmjs.com/search?q=keywords:jupyterlab-extension)) but require additional build step.
+You can also find JupyterLab extensions exploring GitHub topic [jupyterlab-extension](https://github.com/topics/jupyterlab-extension).
+To learn more about extensions, see the [user documentation](https://jupyterlab.readthedocs.io/en/stable/user/extensions.html).
 
 The current JupyterLab releases are suitable for general
 usage, and the extension APIs will continue to
@@ -43,13 +50,19 @@ Read the current JupyterLab documentation on [ReadTheDocs](http://jupyterlab.rea
 
 ### Installation
 
-JupyterLab can be installed using `conda` or `pip`. For more detailed instructions, consult the [installation guide](http://jupyterlab.readthedocs.io/en/stable/getting_started/installation.html).
+JupyterLab can be installed using [conda](https://docs.conda.io/en/latest/), [mamba](https://mamba.readthedocs.io/en/latest/) or [pip](https://docs.python.org/3.6/installing/index.html). For more detailed instructions, consult the [installation guide](http://jupyterlab.readthedocs.io/en/stable/getting_started/installation.html).
 
 Project installation instructions from the git sources are available in the [contributor documentation](CONTRIBUTING.md).
 
-### conda
+### mamba and conda
 
-If you use `conda`, you can install it with:
+If you use `mamba` or `conda`, you can install it with:
+
+```shell
+mamba install -c conda-forge jupyterlab
+```
+
+or
 
 ```shell
 conda install -c conda-forge jupyterlab
@@ -135,31 +148,36 @@ JupyterLab is part of [Project Jupyter](http://jupyter.org/) and is developed by
 
 JupyterLab's current maintainers are listed in alphabetical order, with affiliation, and main areas of contribution:
 
-- Mehmet Bektas, Bloomberg (general development, extensions).
+- Mehmet Bektas, Splunk (general development, extensions).
 - Alex Bozarth, IBM (general development, extensions).
 - Eric Charles, Datalayer, (general development, extensions).
+- Frédéric Collonval, QuantStack (general development, extensions).
 - Martha Cryan, IBM (general development, extensions).
 - Afshin Darian, Two Sigma (co-creator, application/high-level architecture,
   prolific contributions throughout the code base).
 - Vidar T. Fauske, JPMorgan Chase (general development, extensions).
-- Tim George, Cal Poly (UI/UX design, strategy, management, user needs analysis)
 - Brian Granger, AWS (co-creator, strategy, vision, management, UI/UX design,
   architecture).
 - Jason Grout, Bloomberg (co-creator, vision, general development).
+- Michał Krassowski, University of Oxford (general development, extensions).
 - Max Klein, JPMorgan Chase (UI Package, build system, general development, extensions).
+- Gonzalo Peña-Castellanos, QuanSight (general development, i18n, extensions).
 - Fernando Perez, UC Berkeley (co-creator, vision).
-- Ian Rose, Quansight/City of LA (general core development, extensions).
-- Andrew Schlaepfer, Bloomberg (general development, extensions).
-- Saul Shanabrook, Quansight (general development, extensions)
+- Isabela Presedo-Floyd, QuanSight Labs (design/UX).
 - Steven Silvester, Apple (co-creator, release management, packaging,
   prolific contributions throughout the code base).
+- Jeremy Tuloup, QuantStack (general development, extensions).
 
 Maintainer emeritus:
 
 - Chris Colbert, Project Jupyter (co-creator, application/low-level architecture,
   technical leadership, vision, PhosphorJS)
 - Jessica Forde, Project Jupyter (demo, documentation)
+- Tim George, Cal Poly (UI/UX design, strategy, management, user needs analysis).
 - Cameron Oelsen, Cal Poly (UI/UX design).
+- Ian Rose, Quansight/City of LA (general core development, extensions).
+- Andrew Schlaepfer, Bloomberg (general development, extensions).
+- Saul Shanabrook, Quansight (general development, extensions)
 
 This list is provided to give the reader context on who we are and how our team functions.
 To be listed, please submit a pull request with your information.

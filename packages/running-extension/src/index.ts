@@ -6,25 +6,20 @@
  */
 
 import {
-  ILayoutRestorer,
   ILabShell,
+  ILayoutRestorer,
   JupyterFrontEnd,
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
-
 import {
   IRunningSessionManagers,
   RunningSessionManagers,
   RunningSessions
 } from '@jupyterlab/running';
-
 import { ITranslator } from '@jupyterlab/translation';
-
 import { runningIcon } from '@jupyterlab/ui-components';
-
-import { addOpenTabsSessionManager } from './opentabs';
-
 import { addKernelRunningSessionManager } from './kernels';
+import { addOpenTabsSessionManager } from './opentabs';
 
 /**
  * The default running sessions extension.
@@ -58,6 +53,8 @@ function activate(
   running.id = 'jp-running-sessions';
   running.title.caption = trans.__('Running Terminals and Kernels');
   running.title.icon = runningIcon;
+  running.node.setAttribute('role', 'region');
+  running.node.setAttribute('aria-label', trans.__('Running Sessions section'));
 
   // Let the application restorer track the running panel for restoration of
   // application state (e.g. setting the running panel as the current side bar

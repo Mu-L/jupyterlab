@@ -42,7 +42,7 @@ Choose and run an appropriate command to bump version numbers for this release.
 | `jlpm bumpversion release` | x.y.z.a1-> x.y.z.b0   | All a.b.c-alpha.1 -> a.b.c-beta.0  |
 | `jlpm bumpversion release` | x.y.z.a1-> x.y.z.rc0  | All a.b.c-alpha.1 -> a.b.c-rc.0    |
 | `jlpm bumpversion release` | x.y.z.rc0-> x.y.z     | All a.b.c-rc0 -> a.b.c             |
-| `jlpm patch:release`       | x.y.z -> x.y.(z+1)    | Changed a.b.c -> a.b.(c+1)         |
+| `jlpm bumpversion patch`   | x.y.z -> x.y.(z+1)    | Changed a.b.c -> a.b.(c+1)         |
 
 Note: For a minor release, we bump the JS packages by 10 versions so that
 we are not competing amongst the minor releases for version numbers.
@@ -71,15 +71,26 @@ Results:
 
 ## Publishing Packages
 
-Now publish the JS packages and build the python packages
+Now publish the JS packages
 
 ```bash
-npm run publish:all
+npm run publish:js
 ```
 
-If there is a network error during JS publish, run `npm run publish:all --skip-build` to resume publish without requiring another clean and build phase of the JS packages.
+If there is a network error during JS publish, run `npm run publish:js --skip-build` to resume publish without requiring another clean and build phase of the JS packages.
 
 Note that the use of `npm` instead of `jlpm` is [significant on Windows](https://github.com/jupyterlab/jupyterlab/issues/6733).
+
+Next, prepare the python release by running:
+
+```bash
+npm run prepare:python-release
+```
+
+This will update the Python package to use the new JS packages and
+create the Python release assets. Note: sometimes the npm registry
+is slow to update with the new packages, so this script tries to fetch
+the packages until they are available.
 
 At this point, run the `./scripts/release_test.sh` to test the wheel in
 a fresh conda environment with and without extensions installed. Open and run
@@ -107,7 +118,7 @@ These lines:
 ## Post release candidate checklist
 
 - [ ] Modify and run `python scripts/milestone_check.py` to check the issues assigned to this milestone
-- [ ] Write [release highlights](https://github.com/jupyterlab/jupyterlab/blob/master/docs/source/getting_started/changelog.rst), starting with:
+- [ ] Write [release highlights](CHANGELOG.md), starting with:
   ```bash
   loghub jupyterlab/jupyterlab -m XXX -t $GITHUB_TOKEN --template scripts/release_template.txt
   ```

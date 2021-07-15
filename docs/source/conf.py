@@ -21,9 +21,13 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
-# For conversion from markdown to html
-from recommonmark.transform import AutoStructify
+import os
+import os.path as osp
+import shutil
+from subprocess import check_call
 
+
+HERE = osp.abspath(osp.dirname(__file__))
 
 # -- General configuration ------------------------------------------------
 
@@ -35,11 +39,13 @@ from recommonmark.transform import AutoStructify
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'recommonmark',
+    'myst_parser',
     'sphinx.ext.intersphinx',
     'sphinx.ext.mathjax',
     'sphinx_copybutton'
 ]
+
+myst_enable_extensions = ["html_image"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -65,8 +71,7 @@ author = 'Project Jupyter'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 
-import os
-_version_py = os.path.join('..', '..', 'jupyterlab', '_version.py')
+_version_py = osp.join(HERE, '..', '..', 'jupyterlab', '_version.py')
 version_ns = {}
 
 with open(_version_py, mode='r') as version_file:
@@ -90,31 +95,22 @@ language = None
 # This patterns also effect to html_static_path and html_extra_path
 exclude_patterns = []
 
-# The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
-
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
 
 # build js docs and stage them to the build directory
-import os
-import shutil
-from subprocess import check_call
-
-
 def build_api_docs(out_dir):
     """build js api docs"""
-    here = os.path.dirname(os.path.abspath(__file__))
-    docs = os.path.join(here, os.pardir)
-    root = os.path.join(docs, os.pardir)
-    docs_api = os.path.join(docs, "api")
-    api_index = os.path.join(docs_api, "index.html")
+    docs = osp.join(HERE, os.pardir)
+    root = osp.join(docs, os.pardir)
+    docs_api = osp.join(docs, "api")
+    api_index = osp.join(docs_api, "index.html")
     # is this an okay way to specify jlpm
     # without installing jupyterlab first?
-    jlpm = ["node", os.path.join(root, "jupyterlab", "staging", "yarn.js")]
+    jlpm = ["node", osp.join(root, "jupyterlab", "staging", "yarn.js")]
 
-    if os.path.exists(api_index):
+    if osp.exists(api_index):
         # avoid rebuilding docs because it takes forever
         # `make clean` to force a rebuild
         print(f"already have {api_index}")
@@ -124,11 +120,28 @@ def build_api_docs(out_dir):
         check_call(jlpm + ["build:packages"], cwd=root)
         check_call(jlpm + ["docs"], cwd=root)
 
-    dest_dir = os.path.join(out_dir, "api")
+    dest_dir = osp.join(out_dir, "api")
     print(f"Copying {docs_api} -> {dest_dir}")
-    if os.path.exists(dest_dir):
+    if osp.exists(dest_dir):
         shutil.rmtree(dest_dir)
     shutil.copytree(docs_api, dest_dir)
+
+# Copy frontend files for snippet inclusion
+FILES_LIST = [  # File paths should be relative to jupyterlab root folder
+    'packages/settingregistry/src/plugin-schema.json'
+]
+SNIPPETS_FOLDER = 'snippets'
+
+def copy_code_files(temp_folder):
+    """Copy files in the temp_folder"""
+    docs = osp.join(HERE, os.pardir)
+    root = osp.join(docs, os.pardir)
+
+    for file in FILES_LIST:
+        target = osp.join(temp_folder, file)
+        if not osp.exists(osp.dirname(target)):
+            os.makedirs(osp.dirname(target), exist_ok=True)
+        shutil.copyfile(osp.join(root, file), target)
 
 
 # -- Options for HTML output ----------------------------------------------
@@ -259,24 +272,19 @@ epub_exclude_files = ['search.html']
 intersphinx_mapping = {'https://docs.python.org/': None}
 
 
-# autodoc configuration with AutoStructify
-#
-# See http://recommonmark.readthedocs.io/en/latest/auto_structify.html
-# See the setup function in current conf.py file in the recommonmark repo
-# https://github.com/rtfd/recommonmark/blob/master/docs/conf.py#L296
-github_doc_root = 'https://github.com/jupyterlab/jupyterlab/tree/master/docs/'
-
-# We can't rely on anchors because GitHub dynamically renders them for
-# markdown documents.
-linkcheck_anchors = False
-
 def setup(app):
-    app.add_config_value('recommonmark_config', {
-        'url_resolver': lambda url: github_doc_root + url,
-        'auto_toc_tree_section': 'Contents',
-        'enable_eval_rst': True,
-        'enable_auto_doc_ref': False,
-    }, True)
-    app.add_transform(AutoStructify)
-    app.add_css_file('custom.css')  # may also be an URL
+    dest = osp.join(HERE, 'getting_started/changelog.md')
+    shutil.copy(osp.join(HERE, '..', '..', 'CHANGELOG.md'), dest)
+    app.add_css_file('css/custom.css')  # may also be an URL
     build_api_docs(app.outdir)
+
+    copy_code_files(osp.join(app.srcdir, SNIPPETS_FOLDER))
+
+    def clean_code_files(app, exception):
+        """Remove temporary folder."""
+        try:
+            shutil.rmtree(osp.join(app.srcdir, SNIPPETS_FOLDER))
+        except Exception as e:
+            print(f"Fail to remove temporary snippet folder: {e}")
+    
+    app.connect('build-finished', clean_code_files)

@@ -1,29 +1,27 @@
 // Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
 
-import { MessageLoop, Message } from '@lumino/messaging';
-
-import { Widget } from '@lumino/widgets';
-
-import { generate, simulate } from 'simulate-event';
-
 import {
-  CodeCellModel,
+  Cell,
   CodeCell,
-  MarkdownCellModel,
+  CodeCellModel,
   MarkdownCell,
-  RawCellModel,
+  MarkdownCellModel,
   RawCell,
-  Cell
+  RawCellModel
 } from '@jupyterlab/cells';
-
-import { INotebookModel, NotebookModel } from '../src';
-
-import { Notebook, StaticNotebook } from '../src';
-
 import { framePromise, signalToPromise } from '@jupyterlab/testutils';
 import { JupyterServer } from '@jupyterlab/testutils/lib/start_jupyter_server';
-
+import { Message, MessageLoop } from '@lumino/messaging';
+import { Widget } from '@lumino/widgets';
+import { generate, simulate } from 'simulate-event';
+import * as nbformat from '@jupyterlab/nbformat';
+import {
+  INotebookModel,
+  Notebook,
+  NotebookModel,
+  StaticNotebook
+} from '../src';
 import * as utils from './utils';
 
 const server = new JupyterServer();
@@ -40,12 +38,23 @@ afterAll(async () => {
 const contentFactory = utils.createNotebookFactory();
 const editorConfig = utils.defaultEditorConfig;
 const rendermime = utils.defaultRenderMime();
+const notebookConfig = {
+  scrollPastEnd: true,
+  defaultCell: 'code' as nbformat.CellType,
+  recordTiming: false,
+  numberCellsToRenderDirectly: 2,
+  renderCellOnIdle: true,
+  observedTopMargin: '1000px',
+  observedBottomMargin: '1000px',
+  maxNumberOutputs: 50
+};
 
 const options: Notebook.IOptions = {
   rendermime,
   contentFactory,
   mimeTypeService: utils.mimeTypeService,
-  editorConfig
+  editorConfig,
+  notebookConfig
 };
 
 function createWidget(): LogStaticNotebook {
@@ -262,7 +271,7 @@ describe('@jupyter/notebook', () => {
         const model = new NotebookModel();
         model.fromJSON(utils.DEFAULT_CONTENT);
         widget.model = model;
-        expect(widget.widgets.length).toBe(6);
+        expect(widget.widgets.length).toBe(model.cells.length);
       });
 
       it('should add a default cell if the notebook model is empty', () => {
@@ -324,7 +333,7 @@ describe('@jupyter/notebook', () => {
         it('should handle an add', () => {
           const cell = widget.model!.contentFactory.createCodeCell({});
           widget.model!.cells.push(cell);
-          expect(widget.widgets.length).toBe(7);
+          expect(widget.widgets.length).toBe(widget.model!.cells.length);
           const child = widget.widgets[0];
           expect(child.hasClass('jp-Notebook-cell')).toBe(true);
         });
@@ -335,9 +344,13 @@ describe('@jupyter/notebook', () => {
           cell1.value.text = '# Hello';
           widget.model!.cells.push(cell1);
           widget.model!.cells.push(cell2);
-          expect(widget.widgets.length).toBe(8);
-          const child1 = widget.widgets[6] as MarkdownCell;
-          const child2 = widget.widgets[7] as MarkdownCell;
+          expect(widget.widgets.length).toBe(widget.model!.cells.length);
+          const child1 = widget.widgets[
+            widget.model!.cells.length - 2
+          ] as MarkdownCell;
+          const child2 = widget.widgets[
+            widget.model!.cells.length - 1
+          ] as MarkdownCell;
           expect(child1.rendered).toBe(true);
           expect(child2.rendered).toBe(false);
         });
@@ -397,19 +410,19 @@ describe('@jupyter/notebook', () => {
       it('should be settable', () => {
         const widget = createWidget();
         expect(widget.widgets[0].editor.getOption('autoClosingBrackets')).toBe(
-          true
+          false
         );
         const newConfig = {
           raw: editorConfig.raw,
           markdown: editorConfig.markdown,
           code: {
             ...editorConfig.code,
-            autoClosingBrackets: false
+            autoClosingBrackets: true
           }
         };
         widget.editorConfig = newConfig;
         expect(widget.widgets[0].editor.getOption('autoClosingBrackets')).toBe(
-          false
+          true
         );
       });
     });
@@ -447,7 +460,7 @@ describe('@jupyter/notebook', () => {
         const widget = createWidget();
         expect(widget.widgets.length).toBe(1);
         widget.model!.fromJSON(utils.DEFAULT_CONTENT);
-        expect(widget.widgets.length).toBe(6);
+        expect(widget.widgets.length).toBe(utils.DEFAULT_CONTENT.cells.length);
       });
     });
 
@@ -752,7 +765,7 @@ describe('@jupyter/notebook', () => {
         widget.activeCellIndex = -2;
         expect(widget.activeCellIndex).toBe(0);
         widget.activeCellIndex = 100;
-        expect(widget.activeCellIndex).toBe(5);
+        expect(widget.activeCellIndex).toBe(widget.model!.cells.length - 1);
       });
 
       it('should emit the `stateChanged` signal', () => {
@@ -1218,7 +1231,8 @@ describe('@jupyter/notebook', () => {
         });
 
         it('should not extend a selection if there is text selected in the output', () => {
-          widget.activeCellIndex = 2;
+          const codeCellIndex = 3;
+          widget.activeCellIndex = codeCellIndex;
 
           // Set a selection in the active cell outputs.
           const selection = window.getSelection()!;
@@ -1227,8 +1241,10 @@ describe('@jupyter/notebook', () => {
           );
 
           // Shift click below, which should not extend cells selection.
-          simulate(widget.widgets[4].node, 'mousedown', { shiftKey: true });
-          expect(widget.activeCellIndex).toBe(2);
+          simulate(widget.widgets[codeCellIndex + 2].node, 'mousedown', {
+            shiftKey: true
+          });
+          expect(widget.activeCellIndex).toBe(codeCellIndex);
           expect(selected(widget)).toEqual([]);
         });
 
@@ -1577,6 +1593,23 @@ describe('@jupyter/notebook', () => {
         widget.activeCellIndex = 2;
         widget.model!.cells.remove(1);
         expect(widget.activeCell).toBe(widget.widgets[1]);
+      });
+    });
+
+    // WIP See https://github.com/jupyterlab/jupyterlab/issues/10526
+    describe('#virtualNotebook()', () => {
+      it('should render the last cell widget', () => {
+        const model = new NotebookModel();
+        const widget = new StaticNotebook(options);
+        widget.model = model;
+        widget.model!.fromJSON(utils.DEFAULT_CONTENT);
+        const cell = widget.widgets[5];
+        expect(
+          cell.inputArea.editorWidget.model.value.text.startsWith(
+            'from IPython.display import Latex'
+          )
+        ).toBe(true);
+        console.log();
       });
     });
   });

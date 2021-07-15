@@ -2,35 +2,25 @@
 // Distributed under the terms of the Modified BSD License.
 
 import { JupyterFrontEnd } from '@jupyterlab/application';
-
 import { VDomModel } from '@jupyterlab/apputils';
-
 import {
   KernelSpec,
   ServerConnection,
   ServiceManager
 } from '@jupyterlab/services';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
-
+import { ITranslator, nullTranslator } from '@jupyterlab/translation';
 import { Debouncer } from '@lumino/polling';
-
 import * as semver from 'semver';
-
 import { doBuild } from './build-helper';
-
 import {
-  presentCompanions,
   IKernelInstallInfo,
-  KernelCompanion
+  KernelCompanion,
+  presentCompanions
 } from './companions';
-
 import { reportInstallError } from './dialog';
-
-import { Searcher, ISearchResult, isJupyterOrg } from './npm';
-
-import { Lister, ListResult, IListEntry } from './listings';
-
-import { nullTranslator, ITranslator } from '@jupyterlab/translation';
+import { IListEntry, Lister, ListResult } from './listings';
+import { ISearchResult, isJupyterOrg, Searcher } from './npm';
 
 /**
  * Information about an extension.
@@ -96,7 +86,7 @@ export interface IEntry {
  */
 export interface IInstall {
   /**
-   * The used pacakge manager (e.g. pip, conda...)
+   * The used package manager (e.g. pip, conda...)
    */
   packageManager: string | undefined;
 
@@ -172,7 +162,7 @@ export interface IInstalledEntry {
  */
 export interface IInstallEntry {
   /**
-   * The used pacakge manager (e.g. pip, conda...)
+   * The used package manager (e.g. pip, conda...)
    */
   packageManager: string | undefined;
 
@@ -232,9 +222,19 @@ export class ListModel extends VDomModel {
     this.serverConnectionSettings = ServerConnection.makeSettings();
     this._debouncedUpdate = new Debouncer(this.update.bind(this), 1000);
     this.lister.listingsLoaded.connect(this._listingIsLoaded, this);
+    this.searcher = new Searcher(
+      settings.composite['npmRegistry'] as string,
+      settings.composite['npmCdn'] as string,
+      settings.composite['enableCdn'] as boolean
+    );
     _isDisclaimed = settings.composite['disclaimed'] === true;
     settings.changed.connect(() => {
       _isDisclaimed = settings.composite['disclaimed'] === true;
+      this.searcher = new Searcher(
+        settings.composite['npmRegistry'] as string,
+        settings.composite['npmCdn'] as string,
+        settings.composite['enableCdn'] as boolean
+      );
       void this.update();
     });
   }
@@ -745,32 +745,30 @@ export class ListModel extends VDomModel {
    * Emits the `stateChanged` signal on successful completion.
    */
   protected async update(refreshInstalled = false) {
-    // Start both queries before awaiting:
+    if (ListModel.isDisclaimed()) {
+      const [searchMap, installedMap] = await Promise.all([
+        this.performSearch(),
+        this.queryInstalled(refreshInstalled)
+      ]);
 
-    const searchMapPromise = this.performSearch();
-    const installedMapPromise = this.queryInstalled(refreshInstalled);
-
-    // Await results:
-    const searchMap = await searchMapPromise;
-    const installedMap = await installedMapPromise;
-
-    // Map results to attributes:
-    const installed: IEntry[] = [];
-    for (const key of Object.keys(installedMap)) {
-      installed.push(installedMap[key]);
-    }
-    this._installed = installed.sort(Private.comparator);
-
-    const searchResult: IEntry[] = [];
-    for (const key of Object.keys(searchMap)) {
-      // Filter out installed entries from search results:
-      if (installedMap[key] === undefined) {
-        searchResult.push(searchMap[key]);
-      } else {
-        searchResult.push(installedMap[key]);
+      // Map results to attributes:
+      const installed: IEntry[] = [];
+      for (const key of Object.keys(installedMap)) {
+        installed.push(installedMap[key]);
       }
+      this._installed = installed.sort(Private.comparator);
+
+      const searchResult: IEntry[] = [];
+      for (const key of Object.keys(searchMap)) {
+        // Filter out installed entries from search results:
+        if (installedMap[key] === undefined) {
+          searchResult.push(searchMap[key]);
+        } else {
+          searchResult.push(installedMap[key]);
+        }
+      }
+      this._searchResult = searchResult.sort(Private.comparator);
     }
-    this._searchResult = searchResult.sort(Private.comparator);
 
     // Signal updated state
     this.stateChanged.emit(undefined);
@@ -882,7 +880,7 @@ export class ListModel extends VDomModel {
   /**
    * A helper for performing searches of jupyterlab extensions on the NPM repository.
    */
-  protected searcher = new Searcher();
+  protected searcher: Searcher;
 
   protected lister = new Lister();
 
@@ -893,7 +891,7 @@ export class ListModel extends VDomModel {
 
   protected translator: ITranslator;
   private _app: JupyterFrontEnd;
-  private _query: string | null = null;
+  private _query: string | null = ''; // TODO: we may not need the null case?
   private _page: number = 0;
   private _pagination: number = 250;
   private _totalEntries: number = 0;

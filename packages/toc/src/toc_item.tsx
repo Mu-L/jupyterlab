@@ -3,6 +3,8 @@
 
 import * as React from 'react';
 import { IHeading } from './utils/headings';
+import { Signal } from '@lumino/signaling';
+import { TableOfContents } from './toc';
 
 /**
  * Interface describing component properties.
@@ -14,14 +16,24 @@ interface IProperties {
    * Heading to render.
    */
   heading: IHeading;
+  /**
+   * List of headings to use for rendering current position in toc
+   */
+  toc: IHeading[];
+
+  /**
+   * Optional signal that emits when a toc entry is clicked
+   */
+  entryClicked?: Signal<TableOfContents, TOCItem>;
 
   /**
    * Renders a heading.
    *
    * @param item - heading
+   * @param toc - list of headings
    * @returns rendered heading
    */
-  itemRenderer: (item: IHeading) => JSX.Element | null;
+  itemRenderer: (item: IHeading, toc: IHeading[]) => JSX.Element | null;
 }
 
 /**
@@ -43,18 +55,33 @@ class TOCItem extends React.Component<IProperties, IState> {
    * @returns rendered entry
    */
   render() {
-    const { heading } = this.props;
+    const { heading, toc } = this.props;
 
     // Create an onClick handler for the TOC item
     // that scrolls the anchor into view.
     const onClick = (event: React.SyntheticEvent<HTMLSpanElement>) => {
       event.preventDefault();
       event.stopPropagation();
+      this.props.entryClicked?.emit(this);
       heading.onClick();
     };
 
-    let content = this.props.itemRenderer(heading);
-    return content && <li onClick={onClick}>{content}</li>;
+    let content = this.props.itemRenderer(heading, toc);
+    if (!content) {
+      return null;
+    }
+    return (
+      <li
+        className="jp-tocItem"
+        onClick={onClick}
+        onContextMenu={(event: React.SyntheticEvent<HTMLSpanElement>) => {
+          this.props.entryClicked?.emit(this);
+          heading.onClick();
+        }}
+      >
+        {content}
+      </li>
+    );
   }
 }
 

@@ -1,27 +1,17 @@
 // Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
 
-import { ArrayExt, each, map, find, filter, toArray } from '@lumino/algorithm';
-
-import { DisposableSet, IDisposable } from '@lumino/disposable';
-
-import { IMessageHandler, Message, MessageLoop } from '@lumino/messaging';
-
-import { AttachedProperty } from '@lumino/properties';
-
-import { ISignal, Signal } from '@lumino/signaling';
-
-import { Widget } from '@lumino/widgets';
-
+import { Dialog, showDialog } from '@jupyterlab/apputils';
 import { Time } from '@jupyterlab/coreutils';
-
-import { showDialog, Dialog } from '@jupyterlab/apputils';
-
 import { DocumentRegistry, IDocumentWidget } from '@jupyterlab/docregistry';
-
 import { Contents } from '@jupyterlab/services';
-
-import { nullTranslator, ITranslator } from '@jupyterlab/translation';
+import { ITranslator, nullTranslator } from '@jupyterlab/translation';
+import { ArrayExt, each, filter, find, map, toArray } from '@lumino/algorithm';
+import { DisposableSet, IDisposable } from '@lumino/disposable';
+import { IMessageHandler, Message, MessageLoop } from '@lumino/messaging';
+import { AttachedProperty } from '@lumino/properties';
+import { ISignal, Signal } from '@lumino/signaling';
+import { Widget } from '@lumino/widgets';
 
 /**
  * The class name added to document widgets.
@@ -100,7 +90,10 @@ export class DocumentWidgetManager implements IDisposable {
     // Handle widget extensions.
     const disposables = new DisposableSet();
     each(this._registry.widgetExtensions(factory.name), extender => {
-      disposables.add(extender.createNew(widget, context));
+      const disposable = extender.createNew(widget, context);
+      if (disposable) {
+        disposables.add(disposable);
+      }
     });
     Private.disposablesProperty.set(widget, disposables);
     widget.disposed.connect(this._onWidgetDisposed, this);
@@ -314,7 +307,7 @@ export class DocumentWidgetManager implements IDisposable {
           return true;
         }
         if (context.contentsModel?.writable) {
-          await context.save();
+          await context.save(true);
         } else {
           await context.saveAs();
         }

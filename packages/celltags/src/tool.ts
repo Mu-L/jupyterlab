@@ -1,15 +1,15 @@
-import { reduce } from '@lumino/algorithm';
-import { PanelLayout } from '@lumino/widgets';
-import { NotebookTools, INotebookTracker } from '@jupyterlab/notebook';
-import { Cell } from '@jupyterlab/cells';
 import { JupyterFrontEnd } from '@jupyterlab/application';
+import { Cell } from '@jupyterlab/cells';
+import { INotebookTracker, NotebookTools } from '@jupyterlab/notebook';
 import {
-  nullTranslator,
   ITranslator,
+  nullTranslator,
   TranslationBundle
 } from '@jupyterlab/translation';
-import { TagWidget } from './widget';
+import { reduce } from '@lumino/algorithm';
+import { PanelLayout } from '@lumino/widgets';
 import { AddWidget } from './addwidget';
+import { TagWidget } from './widget';
 
 /**
  * A Tool for tag operations.
@@ -71,7 +71,9 @@ export class TagTool extends NotebookTools.Tool {
   addTag(name: string) {
     const cell = this.tracker?.activeCell;
     if (cell) {
-      const oldTags = (cell.model.metadata.get('tags') as string[]) || [];
+      const oldTags = [
+        ...((cell.model.metadata.get('tags') as string[]) ?? [])
+      ];
       let tagsToAdd = name.split(/[,\s]+/);
       tagsToAdd = tagsToAdd.filter(tag => tag !== '' && !oldTags.includes(tag));
       cell.model.metadata.set('tags', oldTags.concat(tagsToAdd));
@@ -88,7 +90,9 @@ export class TagTool extends NotebookTools.Tool {
   removeTag(name: string) {
     const cell = this.tracker?.activeCell;
     if (cell) {
-      const oldTags = cell.model.metadata.get('tags') as string[];
+      const oldTags = [
+        ...((cell.model.metadata.get('tags') as string[]) ?? [])
+      ];
       let tags = oldTags.filter(tag => tag !== name);
       cell.model.metadata.set('tags', tags);
       if (tags.length === 0) {
@@ -116,11 +120,11 @@ export class TagTool extends NotebookTools.Tool {
    */
   pullTags() {
     const notebook = this.tracker?.currentWidget;
-    const cells = notebook?.model?.cells || [];
+    const cells = notebook?.model?.cells ?? [];
     const allTags = reduce(
       cells,
       (allTags: string[], cell) => {
-        const tags = (cell.metadata.get('tags') as string[]) || [];
+        const tags = (cell.metadata.get('tags') as string[]) ?? [];
         return [...allTags, ...tags];
       },
       []
@@ -216,15 +220,16 @@ export class TagTool extends NotebookTools.Tool {
    * Handle a change to active cell metadata.
    */
   protected onActiveCellMetadataChanged(): void {
-    const tags = this.tracker.activeCell!.model.metadata.get('tags');
+    const tags = this.tracker.activeCell!.model.metadata.get(
+      'tags'
+    ) as string[];
     let taglist: string[] = [];
-    if (tags === undefined) {
-      return;
-    }
-    if (typeof tags === 'string') {
-      taglist.push(tags);
-    } else {
-      taglist = tags as string[];
+    if (tags) {
+      if (typeof tags === 'string') {
+        taglist.push(tags);
+      } else {
+        taglist = tags as string[];
+      }
     }
     this.validateTags(this.tracker.activeCell!, taglist);
   }
